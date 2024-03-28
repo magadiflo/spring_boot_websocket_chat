@@ -88,3 +88,41 @@ prefijos para los destinos de mensajes. Este método hace dos cosas:
 
 [![01.websocket-configuration.png](./assets/01.websocket-configuration.png)](https://www.toptal.com/java/stomp-spring-boot-websocket)
 
+## Método con @EventListener para escuchar la desconexión de un usuario
+
+Crearemos un componente que será un Listener, es decir contendrá un método anotado con `@EventListener`.
+
+Cuando se usa `@EventListener`, Spring escanea automáticamente los métodos anotados en busca de aquellos que manejan
+eventos específicos y los registra como listeners de eventos. Estos métodos pueden recibir como parámetro el evento que
+están escuchando. En nuestro ejemplo, el evento que está escuchando nuestro método es `SessionDisconnectEvent`.
+
+La anotación `@EventListener` marca al método como detector de eventos de la aplicación. Si un método anotado admite un
+único tipo de evento, el método puede declarar un único parámetro que refleje el tipo de evento a escuchar.
+
+Los eventos pueden ser instancias de `ApplicationEvent` así como objetos arbitrarios.
+
+`SessionDisconnectEvent`, evento que se genera cuando se cierra la sesión de un cliente `WebSocket` que utiliza un
+protocolo de mensajería simple (por ejemplo, STOMP) como subprotocolo WebSocket.
+
+Tenga en cuenta que este evento puede generarse más de una vez para una sola sesión y, por lo tanto, los consumidores de
+eventos deben ser idempotentes e ignorar un evento duplicado.
+
+En el contexto de Spring Boot, el método está anotado con `@EventListener`, lo que indica que es un listener de eventos
+de Spring. Además, está específicamente configurado para manejar eventos del tipo `SessionDisconnectEvent`.
+
+El método `handleWebSocketDisconnectListener()` se ejecutará cuando se produzca un evento de desconexión de WebSocket en
+la aplicación. Esto significa que **el método se activará automáticamente cada vez que un cliente WebSocket se
+desconecte del servidor.**
+
+````java
+
+@Slf4j
+@RequiredArgsConstructor
+@Component
+public class WebSocketEventListener {
+    @EventListener
+    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        // TODO to be implemented. Informaremos a los usuarios de la aplicación que un usuario ha abandonado el chat
+    }
+}
+````
