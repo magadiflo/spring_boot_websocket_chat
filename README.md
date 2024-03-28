@@ -60,6 +60,26 @@ interactivas, juegos en línea, chats en vivo y otras aplicaciones que requieren
 WebSocket no es un sustituto total de HTTP, pero puede usarse como canal de comunicación eficiente y bidireccional
 siempre que se necesite dar o recibir información en tiempo real.
 
+## [Protocolos WebSocket y STOMP](https://www.toptal.com/java/stomp-spring-boot-websocket)
+
+El protocolo WebSocket le permite implementar comunicación bidireccional entre aplicaciones. **Es importante saber que
+HTTP se utiliza sólo para el protocolo de enlace inicial. Una vez que esto sucede, la conexión HTTP se actualiza a una
+conexión TCP/IP recién abierta que utiliza un WebSocket.**
+
+El protocolo WebSocket es un protocolo de nivel bastante bajo. Define cómo un flujo de bytes se transforma en tramas. Un
+marco puede contener un texto o un mensaje binario. Debido a que el mensaje en sí no proporciona ninguna información
+adicional sobre cómo enrutarlo o procesarlo, es difícil implementar aplicaciones más complejas sin escribir código
+adicional. Afortunadamente, la especificación WebSocket permite el uso de subprotocolos que operan en un nivel de
+aplicación superior. Uno de ellos, respaldado por Spring Framework, es STOMP.
+
+`STOMP` es un protocolo de mensajería simple basado en texto que se creó inicialmente para lenguajes de secuencias de
+comandos como Ruby, Python y Perl para conectarse a intermediarios de mensajes empresariales. Gracias a STOMP, los
+clientes y corredores desarrollados en diferentes idiomas pueden enviar y recibir mensajes entre sí. El protocolo
+WebSocket a veces se denomina TCP para Web. Analógicamente, STOMP se llama HTTP para Web. Define un puñado de tipos de
+tramas que se asignan a tramas de WebSockets, por ejemplo, CONECTAR, SUSCRIBIR, CANCELAR SUSCRIPCIÓN, ACK o ENVIAR. Por
+un lado, estos comandos son muy útiles para gestionar la comunicación y, por otro, nos permiten implementar soluciones
+con funciones más sofisticadas como el reconocimiento de mensajes.
+
 ## [Http Connection vs WebSocket Connection](https://www.ionos.es/digitalguide/paginas-web/desarrollo-web/que-es-websocket/)
 
 **¿Cómo se accede a una página web sin WebSocket?** En Internet, la transmisión de páginas web suele realizarse mediante
