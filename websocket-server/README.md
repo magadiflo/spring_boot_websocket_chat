@@ -88,6 +88,11 @@ prefijos para los destinos de mensajes. Este método hace dos cosas:
 
 [![01.websocket-configuration.png](./assets/01.websocket-configuration.png)](https://www.toptal.com/java/stomp-spring-boot-websocket)
 
+Simplificando el diagrama anterior, lo que realizaremos en este proyecto un chat donde un usuario se unirá a un chat,
+enviará mensaje o se desconectará y los demás usuarios que estén en el mismo chat recibirán todos esos mensajes:
+
+![](../assets/06.comunication.png)
+
 ## Método con @EventListener para escuchar la desconexión de un usuario
 
 Crearemos un componente que será un Listener, es decir contendrá un método anotado con `@EventListener`.
