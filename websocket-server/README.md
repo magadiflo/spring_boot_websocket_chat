@@ -126,3 +126,86 @@ public class WebSocketEventListener {
     }
 }
 ````
+
+## Creando controlador ChatController
+
+Antes de continuar con el controlador, es necesario crear un record y un enum que serán usados precisamente por los
+métodos del controlador:
+
+````java
+public enum MessageType {
+    CHAT,       // Cuando va a chatear
+    JOIN,       // Cuando se va a unir a un chat
+    LEAVER      // Cuando se desconecta del chat
+}
+````
+
+````java
+public record ChatMessage(String content, String sender, MessageType type) {
+}
+````
+
+Ahora, sí continuamos con la clase de controlador y sus dos métodos:
+
+````java
+
+@Controller
+public class ChatController {
+
+    @MessageMapping("/chat.sendMessage")
+    @SendTo("/topic/public")
+    public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
+        return chatMessage;
+    }
+
+    @MessageMapping("/chat.addUser")
+    @SendTo("/topic/public")
+    public ChatMessage addUser(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
+        // Agrega el username en la sesión de webSocket
+        headerAccessor.getSessionAttributes().put("username", chatMessage.sender());
+        return chatMessage;
+    }
+}
+````
+
+### Describiendo método sendMessage()
+
+`@MessageMapping("/chat.sendMessage")`, con esta anotación decimos cuál es la URL que quiero usar para invocar el
+método `sendMessage()`.
+
+`@MessageMapping`, anotación para asignar un mensaje a un método de manejo de mensajes haciendo coincidir los patrones
+declarados con un destino extraído del mensaje.
+
+Los métodos anotados con `@MessageMapping` admiten los siguientes argumentos:
+
+- `@Payload`, argumento del método para extraer el payload de un mensaje y de-serializarlo al tipo de destino declarado.
+  Los argumentos `@Payload` también se pueden anotar con anotaciones de validación como `@Validated` y luego se les
+  aplicará la validación `JSR-303`. Tenga en cuenta que **no es necesario que la anotación esté presente, ya que se
+  asume de forma predeterminada para los argumentos que no se manejan de otra manera.**
+
+  Cuando estamos trabajando con una aplicación `Rest`, normalmente usamos el `@RequestBody` para enlazar el contenido
+  que viene en el cuerpo de la solicitud con la clase a asociar. Ahora, cuando hablamos de `WebSocket`, lo que debemos
+  usar es el `@Payload`.
+
+- `@DestinationVariable`, argumento del método para acceder a los valores de las variables de la plantilla extraídos del
+  destino del mensaje, por ejemplo `/hoteles/{hotel}`. **Los valores de las variables también se pueden convertir
+  de `String` al tipo de argumento del método declarado, si es necesario.**
+
+Existen más argumentos: `@Header`, `@Headers`, `MessageHeaders`, etc.
+
+> `@SendTo("/topic/public")`, a qué topic o a qué cola queremos enviar. Este topic proviene del
+> método `configureMessageBroker()` de la clase `WebSocketConfig`, línea: `registry.enableSimpleBroker("/topic")`.
+
+#### En resumen:
+
+Cada vez que recibamos un mensaje a través del método `sendMessage()` y como por parámetro se está recibiendo
+un `@Payload`, este se enviará **automáticamente** al topic `/topic/public`, es decir, se hará uso **automáticamente**
+de la anotación `@SendTo("/topic/public")`, por lo que simplemente el payload que recibimos por parámetro lo retornamos.
+
+En resumen, cuando queramos usar el método `sendMessage()` debemos llamar al endpoint `/chat.sendMessage` y
+luego, cada vez que recibamos un mensaje o un `@Payload` se pondrá en cola en `/topi/public`.
+
+### Describiendo método addUser()
+
+En caso de que un nuevo usuario se una, el método `addUser()` nos permitirá establecer una conexión entre el `usuario`
+y el `WebSocket`.
