@@ -240,3 +240,218 @@ luego, cada vez que recibamos un mensaje o un `@Payload` se pondrá en cola en `
 
 En caso de que un nuevo usuario se una, el método `addUser()` nos permitirá establecer una conexión entre el `usuario`
 y el `WebSocket`.
+
+---
+
+# WebSocket - FrontEnd
+
+---
+
+En esta sección trabajaremos la parte del frontEnd, cómo es que podemos implementar el chat usando html, css y js.
+A continuación mostramos la estructura html, los estilos css no lo colocaremos en este documento dado que son solo
+estilos.
+
+En este punto, es importante resaltar que haremos uso de las librerías `sockjs.min.js` y `stomp.min.js` para poder
+facilitar la comunicación entre el cliente web y el servidor en tiempo real.
+
+`sockjs`, esta es una biblioteca cliente JavaScript que proporciona una abstracción sobre `WebSockets` y otras
+tecnologías de comunicación de sockets en el navegador web. WebSockets permiten una conexión bidireccional persistente
+entre un cliente y un servidor, lo que es útil para aplicaciones que necesitan actualizaciones en tiempo real, como
+chats, juegos en línea, y aplicaciones de colaboración.
+
+`stomp`, este es un cliente JavaScript para el protocolo `STOMP` **(Simple (or Streaming) Text Oriented Messaging
+Protocol)**. `STOMP` es un protocolo de mensajería simple que se utiliza comúnmente para la comunicación entre clientes
+y servidores en aplicaciones basadas en mensajería, como aplicaciones de chat, sistemas de notificación en tiempo real y
+sistemas de colas de mensajes.
+
+````html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Spring Boot WebSocket Chat Application</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+<noscript>
+    <h2>Sorry! Your browser doesn't support Javascript</h2>
+</noscript>
+
+<div id="username-page">
+    <div class="username-page-container">
+        <h1 class="title">Type your username to enter the Chatroom</h1>
+        <form id="usernameForm" name="usernameForm">
+            <div class="form-group">
+                <input type="text" id="name" placeholder="Username" aria-label="username" autocomplete="off"
+                       class="form-control">
+            </div>
+            <div class="form-group">
+                <button type="submit" class="accent username-submit">Start Chatting</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="chat-page" class="hidden">
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Spring WebSocket Chat Demo - By Alibou</h2>
+        </div>
+        <div class="connecting">
+            Connecting...
+        </div>
+        <ul id="messageArea">
+
+        </ul>
+        <form id="messageForm" name="messageForm">
+            <div class="form-group">
+                <div class="input-group clearfix">
+                    <input type="text" id="message" placeholder="Type a message..." autocomplete="off"
+                           class="form-control"/>
+                    <button type="submit" class="primary">Send</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="./js/scripts.js"></script>
+</body>
+</html>
+````
+
+Ahora, se muestra el archivo de javascript donde se codificó la lógica del chat: iniciar conexión, conectarse a un
+topic, envío de mensajes:
+
+````javascript
+'use strict';
+
+var usernamePage = document.querySelector('#username-page');
+var chatPage = document.querySelector('#chat-page');
+var usernameForm = document.querySelector('#usernameForm');
+var messageForm = document.querySelector('#messageForm');
+var messageInput = document.querySelector('#message');
+var messageArea = document.querySelector('#messageArea');
+var connectingElement = document.querySelector('.connecting');
+
+var stompClient = null; //* Será nuestro webSocket
+var username = null;
+
+var colors = [
+    '#2196F3', '#32c787', '#00BCD4', '#ff5652',
+    '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
+];
+
+function connect(event) {
+    event.preventDefault();
+
+    username = document.querySelector('#name').value.trim();
+    if (username) {
+        usernamePage.classList.add('hidden');
+        chatPage.classList.remove('hidden');
+
+        var socket = new SockJS('/web-socket');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, onConnected, onError);
+    }
+}
+
+function onConnected() {
+    //* Subscribirse al Topic público
+    stompClient.subscribe('/topic/public', onMessageReceived);
+
+    //* Dígale el nombre de usuario al servidor
+    const payload = JSON.stringify({ sender: username, type: 'JOIN' });
+    stompClient.send('/app/chat.addUser', {}, payload);
+
+    connectingElement.classList.add('hidden');
+}
+
+function onError() {
+    connectingElement.textContent = 'No se pudo conectar al servidor WebSocket. Por favor, actualiza la página e inténtalo nuevamente.';
+    connectingElement.style.color = 'red';
+}
+
+function onMessageReceived(payload) {
+    var message = JSON.parse(payload.body);
+
+    var messageElement = document.createElement('li');
+
+    if(message.type == 'JOIN') {
+        messageElement.classList.add('event-message');
+        message.content = message.sender + ' ¡unido!';
+
+    } else if(message.type == 'LEAVE') {
+        messageElement.classList.add('event-message');
+        message.content = message.sender + ' ¡salió!';
+
+    } else {
+
+        messageElement.classList.add('chat-message');
+
+        var avatarElement = document.createElement('i');
+        var avatarText = document.createTextNode(message.sender[0]); //* Primera letra del remitente
+
+        avatarElement.appendChild(avatarText);
+        avatarElement.style['background-color'] = getAvatarColor(message.sender);
+
+        messageElement.appendChild(avatarElement);
+
+        var usernameElement = document.createElement('span');
+        var usernameText = document.createTextNode(message.sender);
+        usernameElement.appendChild(usernameText);
+        messageElement.appendChild(usernameElement);
+    }
+
+    var textElement = document.createElement('p');
+    var messageText = document.createTextNode(message.content);
+    textElement.appendChild(messageText);
+
+    messageElement.appendChild(textElement);
+
+    messageArea.appendChild(messageElement);
+    messageArea.scrollTop = messageArea.scrollHeight;
+}
+
+function sendMessage(event) {
+    event.preventDefault();
+
+    var messageContent = messageInput.value.trim();
+    if (messageContent && stompClient) {
+        const payload = JSON.stringify({ content: messageContent, sender: username, type: 'CHAT' });
+        stompClient.send('/app/chat.sendMessage', {}, payload);
+        messageInput.value = '';
+    }
+}
+
+function getAvatarColor(messageSender) {
+    var hash = 0;
+    for (var i = 0; i < messageSender.length; i++) {
+        hash = 31 * hash + messageSender.charCodeAt(i);
+    }
+    var index = Math.abs(hash % colors.length);
+    console.log('index: ' + index);
+    return colors[index];
+}
+
+usernameForm.addEventListener('submit', connect, true);
+messageForm.addEventListener('submit', sendMessage, true);
+````
+
+Luego, iniciamos la aplicación y abrimos 4 navegadores y realizamos las pruebas:
+
+### Iniciando conexión y conversando
+
+![03.conectandose.png](../assets/03.conectandose.png)
+
+### Se conecta un nuevo usuario y todos son notificados
+
+![04.conectandose-desconectandose.png](../assets/04.conectandose-desconectandose.png)
+
+### El nuevo usuario conectado se sale de la conversación y todos son notificados
+
+![05.connect-test.png](../assets/05.connect-test.png)
