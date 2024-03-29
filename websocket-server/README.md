@@ -120,12 +120,42 @@ desconecte del servidor.**
 @RequiredArgsConstructor
 @Component
 public class WebSocketEventListener {
+
+    private final SimpMessageSendingOperations sendingOperations;
+
+    // Informaremos a los usuarios de la aplicación que el usuario ha abandonado el chat
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
-        // TODO to be implemented. Informaremos a los usuarios de la aplicación que un usuario ha abandonado el chat
+        StompHeaderAccessor headers = StompHeaderAccessor.wrap(event.getMessage());
+        String username = (String) headers.getSessionAttributes().get("username");
+        if (username != null) {
+            log.info("Usuario desconectado: {}", username);
+            ChatMessage chatMessage = new ChatMessage(null, username, MessageType.LEAVE);
+
+            this.sendingOperations.convertAndSend("/topic/public", chatMessage);
+        }
     }
 }
 ````
+
+`StompHeaderAccessor.wrap(event.getMessage())`, crea una instancia de esta clase a partir de un `payload` y los
+encabezados del `Message` dado.
+
+`event.getMessage()`, devuelve el mensaje asociado con el evento. A continuación se muestra un ejemplo de cómo
+obtener información sobre la identificación de la sesión o cualquier encabezado en el mensaje:
+
+````bash
+StompHeaderAccessor headers = StompHeaderAccessor.wrap(message);
+headers.getSessionId();
+headers.getSessionAttributes();
+headers.getPrincipal();
+````
+
+`headers.getSessionAttributes().get("username")`, obtenemos el valor del `username` que será agregado en el controlador.
+
+`this.sendingOperations.convertAndSend("/topic/public", chatMessage)`, convierte el objeto dado a un formato
+serializado, lo envuelve como un message y lo envía al destino especificado, en este caso `/topic/public`. **Esto puede
+ser una forma de notificar a otros clientes conectados que un usuario ha dejado el chat.**
 
 ## Creando controlador ChatController
 
@@ -136,7 +166,7 @@ métodos del controlador:
 public enum MessageType {
     CHAT,       // Cuando va a chatear
     JOIN,       // Cuando se va a unir a un chat
-    LEAVER      // Cuando se desconecta del chat
+    LEAVE      // Cuando se desconecta del chat
 }
 ````
 
@@ -162,6 +192,7 @@ public class ChatController {
     @SendTo("/topic/public")
     public ChatMessage addUser(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         // Agrega el username en la sesión de webSocket
+        //headerAccessor.getSessionAttributes(), devuelve los atributos asociados con la sesión actual
         headerAccessor.getSessionAttributes().put("username", chatMessage.sender());
         return chatMessage;
     }
